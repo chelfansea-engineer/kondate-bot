@@ -1,20 +1,21 @@
 # 進み具合
 
-最終更新: 2026-11-23（ステップ3の実装）
+最終更新: 2026-11-24（ステップ4の実装）
 
 ## いまどこ
 
 - ステップ1（オウム返しボット）… 完了。実際のLINEで確認済み
 - ステップ2（在庫API + D1のテーブル + `pnpm run simulate`）… 完了。`main` にマージしてプッシュ済み。本番D1も作成・マイグレーション済み
-- ステップ3（LIFFの在庫編集画面 + リッチメニュー）… 完了。再デプロイ、リッチメニューの設定、LINE上とD1での動作確認まで済み（2026-11-23）。ブランチ `feature/step3-liff-pantry-ui` は未プッシュ・未マージ
-- 次はステップ4（チャットでの献立相談）
+- ステップ3（LIFFの在庫編集画面 + リッチメニュー）… 完了。再デプロイ、リッチメニューの設定、LINE上とD1での動作確認まで済み（2026-11-23）。`main` にマージ・プッシュ済み
+- ステップ4（チャットでの献立相談）… 実装済み。ブランチ `feature/step4-gemini-suggest`（未プッシュ）。**本物のGemini APIでの確認と、本番へのデプロイが未了**（下の「人間がやること」）
+- 次はステップ5（毎朝9時のPush）。ステップ4の提案の流れ（`handlers/suggest.ts` の `suggestionText`）を再利用する
 
 | ステップ | 内容 | 状態 |
 | --- | --- | --- |
 | 1 | オウム返しボット（Webhook + 署名検証 + Reply） | 完了 |
 | 2 | 在庫API + D1のテーブル | 完了（`main` にマージ・プッシュ済み。本番D1の作成とマイグレーションも済） |
-| 3 | LIFFの在庫編集画面 + リッチメニュー | 完了（LINE上とD1で、表示・追加・削除の動作確認済み。リッチメニュー設定済み）。`main` へのマージは未 |
-| 4 | チャットでの献立相談（Gemini接続） | 未着手 |
+| 3 | LIFFの在庫編集画面 + リッチメニュー | 完了（LINE上とD1で動作確認済み。`main` にマージ済み） |
+| 4 | チャットでの献立相談（Gemini接続） | 実装済み（未プッシュ・未デプロイ。本物のGemini APIでの確認が未了） |
 | 5 | 毎朝9時のPush | 未着手 |
 
 ## ステップ2で作ったもの
@@ -38,6 +39,19 @@
 - `test/liff-view.test.ts` と `test/liff-screen.test.ts`: 表示ロジックと、画面ファイルの中身（XSS対策、ユーザーIDを送らない、LIFF IDの形式、入力上限）
 - `scripts/check-docs.ts` の対象に `public/` を追加
 
+## ステップ4で作ったもの
+
+- `src/core/suggest.ts`: 提案の出力スキーマ（`zod/mini`）、プロンプトの組み立て、返信の整形、定型文（在庫が空、失敗）。同じスキーマから、Geminiに渡すJSONスキーマも作る
+- `src/clients/gemini.ts`: `generateJson`。`generateContent` を呼び、JSONで受ける。キーはヘッダで送る
+- `src/handlers/suggest.ts`: 在庫の取得 → Gemini → 検証 → Reply の流れ。`suggestionText` は、失敗してもお詫びの文面を返す（ステップ5で再利用する）
+- `src/handlers/webhook.ts`: オウム返しをやめ、先に200を返して、提案を応答のあとで行う（`waitUntil`）。1対1のテキストだけ扱う
+- `scripts/try-gemini.ts`（`pnpm run try:gemini`）: 本番と同じ関数で、本物のAPIを1回呼ぶ確認用
+- 環境変数: `GEMINI_API_KEY`（秘密）、`GEMINI_MODEL`（`wrangler.jsonc` の `vars`。いまは `gemini-3.8-flash`）
+- テスト121件（ステップ3までの77件を含む）。Geminiは `fetch` スタブとモジュールのモック、D1は本物
+- Workerのサイズ: 157KiB / gzip 38KiB（`wrangler deploy --dry-run`。ステップ3時点は 69KiB / gzip 18KiB）
+- ローカルで `wrangler dev` を起動し、署名付きの擬似Webhookで、`waitUntil` の動作、D1の取得、Geminiの呼び出し、失敗時のお詫びまで通ることを確かめた（キーはダミー。Googleは `API_KEY_INVALID` を返した）
+- 追加の依存は `zod` 4.6.7 のみ（承認済み）
+
 ## 決めたこと
 
 - 画面は静的アセットで配信し、Honoの `/liff/*` ルートは作らない。コードを増やさず、Workerを通らないため
@@ -46,7 +60,16 @@
 - 削除は誤タップ防止のため2回押し（1回目で「本当に削除」、3秒以内にもう一度）
 - リッチメニューはコードにしない。画像が要り、作成にはアクセストークンを使うスクリプトが要るため。LINE Official Account Manager で設定する
 - `tsconfig.json` に `allowJs` を足した（テストから画面のJSを読み込むため）。画面のJS自体は型検査しない
-- 追加の依存はなし
+- 追加の依存はなし（ステップ3の時点）
+- zod は軽量版の `zod/mini` を使う。通常版は gzip で約93KB増えるが、軽量版は約12KB（いまのWorker全体は gzip で約18KB）
+- Geminiの出力は、検証に通ったものだけを使う。通らなければお詫びを返す（そのまま送らない）
+- 提案は最大3品。料理名、理由、使う在庫、足りないもの（最大3つ）。文字だけで返す
+- 在庫が空なら、Geminiを呼ばずに登録をうながす
+- 利用者の文字は、`< >` と改行を除き、希望は200文字、在庫は100件で切ってからプロンプトに入れる（区切りの偽装を防ぐ）
+- グループ・ルームの発言には答えない。1対1のトークだけ
+- 利用回数の制限は、まだ入れない（友だち追加した誰でもGeminiを呼べる）。必要になったら、D1に表を足す形で相談する
+- `generateContent` を使う。公式の資料は Interactions API に移りつつあるが、従来のAPIも載っている。JSON出力の指定名が資料によって違う（`responseJsonSchema` と `responseFormat.text.schema`）ため、`responseMimeType` + `responseJsonSchema` の形にした。**本物のAPIで通るかは、`try:gemini` で確かめる**。通らなければ、`clients/gemini.ts` だけを直す
+- `src/core/suggest.ts` だけ、import に `.ts` を付ける（`scripts/try-gemini.ts` が Node で直接読み込むため）
 
 - トークンはIDトークン（`liff.getIDToken()`）を `Authorization: Bearer` で送る。アクセストークンだと検証とプロフィール取得で2回LINEを呼ぶため
 - 認証は `app.use("/api/*", ...)` で全体にかける。今後 `/api/*` にルートを足しても、検証を通らずには届かない
@@ -60,6 +83,13 @@
 
 ## ハマったこと
 
+- **`database_id` を変えると、ローカルのD1は別の空のデータベースになる**: ローカルの保存先がIDごとに分かれるため、`no such table: pantry_items` になった。`pnpm run db:migrate:local` で作り直す
+- **ダミーのキーでは、リクエストの形は確かめられない**: Googleはキーを先に確認して `API_KEY_INVALID`（400）を返す。形の確認は、本物のキーでの `try:gemini` が必要
+- **Nodeで `src/` を直接読み込むと、拡張子なしの import が解決できない**: 確認用スクリプトが `core/suggest.ts` を読むため、そのファイルだけ `./pantry.ts` と書く。`tsconfig.json` に `allowImportingTsExtensions` を足した
+- **`process.exit()` は `never` 型ではない**: 後続の型の絞り込みが効かない。`process.exitCode` を使い、`if / else` にした
+- **検証を外しても通るテスト**: 「想定外の形ならお詫び」のテストが、形が壊れた入力だと `formatReply` が例外を投げて、同じお詫びになっていた。形は近いが上限を超える入力（料理名41文字）に変えて、検証の有無を区別できるようにした。コードを壊して落ちることを確かめる作業で気づいた
+- **送信者のIDを固定しても通るテスト**: 「他のユーザーの在庫を使わない」のテストが、送信者と同じIDを固定しても通っていた。別のユーザーが送るケースに変えた
+
 - **テスト環境の `SELF` は静的アセットを返さない**: `assets` を設定しても404になる（Honoの404）。配信は `wrangler dev` で確かめ、テストは画面ファイルの中身の検査にした
 - **ヘッドレスChromeは幅が約500px未満にできない**: 390pxで撮ると右が切れて見える。500pxで撮り直した
 - **検査がコメントの文言を拾う**: 「HTML差し込みAPIを使わない」のテストが、コメント中の語に反応した。コメントの言い回しを変えた（検査はソース全体への単純な一致）
@@ -70,6 +100,17 @@
 - **ステップ1の積み残し**: ステップ1のブランチはまだ `main` にマージされていない。ステップ2のブランチはその先頭から切っている
 
 ## 人間がやること
+
+ステップ4（未了。順番どおりに）:
+
+1. Google AI Studio で、Gemini APIキーを作る（無料枠の利用規約も確認する）
+2. 本物のAPIで確かめる: `GEMINI_API_KEY=<キー> GEMINI_MODEL=gemini-3.8-flash pnpm run try:gemini`。「OK 検証に成功」と、3品の提案が出ればよい。失敗したら、その出力を共有する
+3. 本番にキーを登録する: `pnpm exec wrangler secret put GEMINI_API_KEY`
+4. 再デプロイ: `pnpm exec wrangler deploy`
+5. LINEで話しかける。在庫が空の人は「登録をうながす」文面、在庫がある人は提案が返る
+6. ローカルの `.dev.vars` に `GEMINI_API_KEY` を足す（`pnpm run dev` で試すとき）
+
+これまで:
 
 - 本番D1を作る: 済（2026-11-23）。`database_id` は `wrangler.jsonc` に反映済み。`wrangler d1 create` の「設定を自動追加しますか？」には `n` と答える（バインディング名が `kondate_bot` になり、コードの `env.DB` と合わなくなるため）
 - 本番にマイグレーションを適用する: 済（2026-11-23。`0001_create_pantry_items.sql` を適用）

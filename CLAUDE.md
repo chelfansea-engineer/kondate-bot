@@ -14,7 +14,8 @@
 - Hono（HTTPルーティング）
 - LINE Messaging API / LIFF
 - Gemini API（Flash系。モデルIDは環境変数 GEMINI_MODEL）
-- Vitest（Cloudflare公式のWorkers用テストプラグイン `@cloudflare/vitest-plugin`）/ zod
+- Vitest（Cloudflare公式のWorkers用テストプラグイン `@cloudflare/vitest-plugin`）
+- zod（軽量版の `zod/mini` を使う。サイズが通常版の約1/8のため）
 - Biome（lint + 整形。Markdownは対象外）
 - 型定義は `@cloudflare/workers-types`
 - pnpm（パッケージ管理）
@@ -32,9 +33,9 @@
 
 - src/index.ts … Honoのルート定義と scheduled。処理は書かない
 - src/env.ts … 環境変数（Env）の型
-- src/handlers/ … 各入口の処理（webhook.ts / auth.ts（/api/* のトークン検証）/ pantry.ts）
-- src/core/ … 純粋な関数と型（いまは在庫の入力検証 pantry.ts。献立ロジックもここ。外部APIを呼ばない）
-- src/clients/ … LINE / Gemini / D1 の薄いラッパー（いまは line.ts / d1.ts）
+- src/handlers/ … 各入口の処理（webhook.ts / auth.ts（/api/* のトークン検証）/ pantry.ts / suggest.ts（献立の提案の流れ））
+- src/core/ … 純粋な関数と型（pantry.ts: 在庫の入力検証 / suggest.ts: 提案の出力スキーマ・プロンプト・返信の整形。外部APIを呼ばない）
+- src/clients/ … LINE / Gemini / D1 の薄いラッパー（line.ts / gemini.ts / d1.ts）
 - migrations/ … D1のスキーマ（0001_create_pantry_items.sql）
 - public/liff/ … 在庫編集画面（素のHTML + JS。index.html / app.js / pantry-view.js / style.css）
 - scripts/ … 開発用スクリプト（simulate.ts / check-docs.ts）
@@ -54,6 +55,7 @@
 - pnpm run check … 型チェック + lint
 - pnpm run dev … ローカル起動
 - pnpm run simulate … 擬似Webhookを送って動作確認（`LINE_CHANNEL_SECRET=... pnpm run simulate [URL] [本文]`。先に dev を起動する）
+- pnpm run try:gemini … 本物のGemini APIを1回呼んで、出力の検証まで通るか確かめる（`GEMINI_API_KEY=... GEMINI_MODEL=... pnpm run try:gemini`。人間が実行する）
 - pnpm run check:docs … 設計書（docs/design.md）と実物の突き合わせ
 - pnpm run db:migrate:local … ローカルD1にマイグレーションを適用（本番は人間が実行）
 
