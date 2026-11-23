@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "wrangler dev",
     "test": "vitest run",
-    "check": "tsc --noEmit && biome check ."
+    "check": "tsc --noEmit && biome check .",
+    "simulate": "node scripts/simulate.ts",
+    "db:migrate:local": "wrangler d1 migrations apply kondate-bot --local"
   },
   "dependencies": {
     "hono": "^4.13.18"
