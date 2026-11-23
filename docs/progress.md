@@ -1,13 +1,13 @@
 # 進み具合
 
-最終更新: 2026-11-24（ステップ4の実装）
+最終更新: 2026-11-24（ステップ4の完了）
 
 ## いまどこ
 
 - ステップ1（オウム返しボット）… 完了。実際のLINEで確認済み
 - ステップ2（在庫API + D1のテーブル + `pnpm run simulate`）… 完了。`main` にマージしてプッシュ済み。本番D1も作成・マイグレーション済み
 - ステップ3（LIFFの在庫編集画面 + リッチメニュー）… 完了。再デプロイ、リッチメニューの設定、LINE上とD1での動作確認まで済み（2026-11-23）。`main` にマージ・プッシュ済み
-- ステップ4（チャットでの献立相談）… 実装済み。ブランチ `feature/step4-gemini-suggest`（未プッシュ）。**本物のGemini APIでの確認と、本番へのデプロイが未了**（下の「人間がやること」）
+- ステップ4（チャットでの献立相談）… 完了。本物のGemini APIで確かめ、本番にデプロイし、LINEアプリに提案が届くことを確認した（2026-11-24）。`main` にマージ・プッシュ済み
 - 次はステップ5（毎朝9時のPush）。ステップ4の提案の流れ（`handlers/suggest.ts` の `suggestionText`）を再利用する
 
 | ステップ | 内容 | 状態 |
@@ -15,7 +15,7 @@
 | 1 | オウム返しボット（Webhook + 署名検証 + Reply） | 完了 |
 | 2 | 在庫API + D1のテーブル | 完了（`main` にマージ・プッシュ済み。本番D1の作成とマイグレーションも済） |
 | 3 | LIFFの在庫編集画面 + リッチメニュー | 完了（LINE上とD1で動作確認済み。`main` にマージ済み） |
-| 4 | チャットでの献立相談（Gemini接続） | 実装済み（未プッシュ・未デプロイ。本物のGemini APIでの確認が未了） |
+| 4 | チャットでの献立相談（Gemini接続） | 完了（本番で、LINEアプリへの提案の受信を確認済み） |
 | 5 | 毎朝9時のPush | 未着手 |
 
 ## ステップ2で作ったもの
@@ -74,7 +74,7 @@
 - トークンはIDトークン（`liff.getIDToken()`）を `Authorization: Bearer` で送る。アクセストークンだと検証とプロフィール取得で2回LINEを呼ぶため
 - 認証は `app.use("/api/*", ...)` で全体にかける。今後 `/api/*` にルートを足しても、検証を通らずには届かない
 - 検証できなかった（LINEの障害など）ときは401にせず例外（500）にする。400だけを「不正なトークン」として扱う
-- zod はまだ入れず、入力検証は手書き（`parsePantryInput`）。入れるのは依存追加なので相談してから。ステップ4で入れるなら置き換える
+- 在庫の入力検証は手書きのまま（`parsePantryInput`）。ステップ4で zod/mini を入れたが、置き換えてはいない（入力は3項目だけで、動いているため）
 - 新しい環境変数は `LIFF_CHANNEL_ID`（LIFFを載せたLINEログインチャネルのID）。`.dev.vars.example` に追記済み
 - 在庫IDは整数の自動採番。画面で重複する名前も許す
 
@@ -97,31 +97,23 @@
 - **setupFiles が vi.mock を無効にする**: セットアップで `cloudflare:test` を読み込むとWorker本体が本物のclientsごとキャッシュされ、テストのモックが効かず、本物のLINE APIを叩いた。`resetDb()` をテストから呼ぶ形にし、`blockNetwork()` で外部通信を失敗させるようにした
 - **GETにボディ**: テストで `Request` にGETのボディを付けると例外になる
 - **D1のマイグレーションをテストで適用する**: `readD1Migrations` を `vitest.config.ts` で読み、`TEST_MIGRATIONS` として渡して `applyD1Migrations` で適用する。`exec` に複数行のSQLを渡す方法は使えない
-- **ステップ1の積み残し**: ステップ1のブランチはまだ `main` にマージされていない。ステップ2のブランチはその先頭から切っている
 
 ## 人間がやること
 
-ステップ4（未了。順番どおりに）:
+残り:
 
-1. Google AI Studio で、Gemini APIキーを作る（無料枠の利用規約も確認する）
-2. 本物のAPIで確かめる: `GEMINI_API_KEY=<キー> GEMINI_MODEL=gemini-3.8-flash pnpm run try:gemini`。「OK 検証に成功」と、3品の提案が出ればよい。失敗したら、その出力を共有する
-3. 本番にキーを登録する: `pnpm exec wrangler secret put GEMINI_API_KEY`
-4. 再デプロイ: `pnpm exec wrangler deploy`
-5. LINEで話しかける。在庫が空の人は「登録をうながす」文面、在庫がある人は提案が返る
-6. ローカルの `.dev.vars` に `GEMINI_API_KEY` を足す（`pnpm run dev` で試すとき）
-
-これまで:
-
-- 本番D1を作る: 済（2026-11-23）。`database_id` は `wrangler.jsonc` に反映済み。`wrangler d1 create` の「設定を自動追加しますか？」には `n` と答える（バインディング名が `kondate_bot` になり、コードの `env.DB` と合わなくなるため）
-- 本番にマイグレーションを適用する: 済（2026-11-23。`0001_create_pantry_items.sql` を適用）
-- LINEログインチャネルを作った（済）。LIFFアプリの登録は、エンドポイントURL（デプロイ後のドメイン）が決まってから。LIFFアプリを登録する（スコープに `openid` が必要）。このチャネルは、Messaging API のチャネルと同じプロバイダーにする。別のプロバイダーだとユーザーIDが一致しない
-- `LIFF_CHANNEL_ID`: 済。秘密ではないので `wrangler.jsonc` の `vars` に入れた（2026-11-23、LINEログインチャネルのチャネルID）。`.dev.vars` に空で書くと上書きされるので書かない
-- デプロイ: 済（2026-11-23。`https://kondate-bot.<サブドメイン>.workers.dev`）。初回は、アップロード直後の確認で `10007 This Worker does not exist` と出て失敗したが、同じコマンドの再実行で通った（反映待ちと見ている）
-- 本番に秘密を登録する: `wrangler secret put LINE_CHANNEL_SECRET` と `wrangler secret put LINE_CHANNEL_ACCESS_TOKEN`（未了）
-- LINEの Webhook URL を `https://<ドメイン>/webhook` に付け替え、「検証」を通す（未了。トンネルは不要になる）
-- 設定を変えたら再デプロイが要る（`wrangler.jsonc` の `workers_dev` / `preview_urls` の明示は次回のデプロイで反映）
-- 再デプロイ: `pnpm exec wrangler deploy`（`assets` と、`workers_dev` / `preview_urls` の明示を反映する）
-- リッチメニューの設定: LINE Official Account Manager →「リッチメニュー」→ 作成。ボタンのリンク先は `https://liff.line.me/<LIFF ID>`
-- LINEの中で動作確認する（表示、追加、削除。外部ブラウザでは、ログイン画面に移動する）
-- ステップ3のブランチのプッシュ、`main` へのマージ
+- **漏れたAPIキーの無効化**: ステップ4の確認中に、Gemini APIキーがチャットに貼られた。AI Studio で、そのキーを削除して作り直したか確認する（本番の `GEMINI_API_KEY` が新しいキーかも）
+- **費用の見張り**: AI Studio の利用状況を、ときどき見る。利用回数の制限（1人あたり）は、まだ入れていない。入れるなら、D1に表を足す形で相談する
+- **モデルの見直し**: いまは `gemini-3.8-flash`（`wrangler.jsonc` の `GEMINI_MODEL`）。費用を抑えるなら、`gemini-3.5-flash-lite` を `try:gemini` で比べてから差し替える
 - `pnpm install` 時のビルドスクリプト警告（esbuild / workerd）を消すなら `pnpm approve-builds`
+
+済:
+
+- 本番D1の作成とマイグレーション（2026-11-23）。`wrangler d1 create` の「設定を自動追加しますか？」には `n` と答える（バインディング名が `kondate_bot` になり、コードの `env.DB` と合わなくなるため）
+- デプロイ（`https://kondate-bot.<サブドメイン>.workers.dev`）。初回は、アップロード直後の確認で `10007 This Worker does not exist` と出て失敗したが、同じコマンドの再実行で通った（反映待ちと見ている）
+- 本番の秘密の登録（`LINE_CHANNEL_SECRET`、`LINE_CHANNEL_ACCESS_TOKEN`、`GEMINI_API_KEY`）と、LINEの Webhook URL の付け替え
+- LINEログインチャネルの作成とLIFFアプリの登録（スコープは `openid`。Messaging API と同じプロバイダー）、`LIFF_CHANNEL_ID` の設定（秘密ではないので `wrangler.jsonc` の `vars`。`.dev.vars` に空で書くと上書きされる）
+- リッチメニューの設定（LINE Official Account Manager。リンク先は `https://liff.line.me/<LIFF ID>`）
+- LINE上での動作確認（在庫の表示・追加・削除、献立の提案）
+- ステップ1〜3のブランチのプッシュと、`main` へのマージ
+- `GEMINI_API_KEY` の本番への登録と、`pnpm run try:gemini` での確認
