@@ -83,7 +83,10 @@ if (deps === null) {
     if (!file.startsWith("src/") || !file.endsWith(".ts")) continue;
     const source = readFileSync(file, "utf8");
     for (const m of source.matchAll(/from "(\.[^"]+)"/g)) {
-      const target = `${posix.normalize(posix.join(posix.dirname(file), m[1] ?? ""))}.ts`;
+      const resolved = posix.normalize(
+        posix.join(posix.dirname(file), m[1] ?? ""),
+      );
+      const target = resolved.endsWith(".ts") ? resolved : `${resolved}.ts`;
       actualEdges.add(`${file} --> ${target}`);
     }
   }

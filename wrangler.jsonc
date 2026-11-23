@@ -10,7 +10,9 @@
   "assets": { "directory": "./public" },
   "vars": {
     // LIFFを載せたLINEログインチャネルのチャネルID。認証情報ではない（IDトークン検証の audience）
-    "LIFF_CHANNEL_ID": "2012765529"
+    "LIFF_CHANNEL_ID": "2012765529",
+    // 使うGeminiのモデルID。変えたら再デプロイする
+    "GEMINI_MODEL": "gemini-3.8-flash"
   },
   "d1_databases": [
     {
