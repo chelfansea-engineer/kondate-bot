@@ -1,6 +1,6 @@
 # 進み具合
 
-最終更新: 2026-11-24（ステップ5の実装）
+最終更新: 2026-11-24（ステップ5の完了）
 
 ## いまどこ
 
@@ -8,7 +8,7 @@
 - ステップ2（在庫API + D1のテーブル + `pnpm run simulate`）… 完了。`main` にマージしてプッシュ済み。本番D1も作成・マイグレーション済み
 - ステップ3（LIFFの在庫編集画面 + リッチメニュー）… 完了。再デプロイ、リッチメニューの設定、LINE上とD1での動作確認まで済み（2026-11-23）。`main` にマージ・プッシュ済み
 - ステップ4（チャットでの献立相談）… 完了。本物のGemini APIで確かめ、本番にデプロイし、LINEアプリに提案が届くことを確認した（2026-11-24）。`main` にマージ・プッシュ済み
-- ステップ5（食べたものの記録）… 実装済み。ブランチ `feature/step5-meals`（未プッシュ）。**本番への反映（マイグレーション、デプロイ）と、LINE上での動作確認、リッチメニューの2分割が未了**（下の「人間がやること」）
+- ステップ5（食べたものの記録）… 完了。本番にマイグレーションとデプロイを済ませ、リッチメニューを2分割にして、LINE上で動作確認した（2026-11-24）。`main` にマージ・プッシュ済み
 - 次はステップ6（毎朝9時のPush）。ステップ4の提案の流れ（`handlers/suggest.ts` の `suggestionText`）を、気分なしで再利用する。在庫のあるユーザー全員に送る（利用者がほぼ1人なので、費用や無料枠は気にしない）
 
 | ステップ | 内容 | 状態 |
@@ -17,7 +17,7 @@
 | 2 | 在庫API + D1のテーブル | 完了（`main` にマージ・プッシュ済み。本番D1の作成とマイグレーションも済） |
 | 3 | LIFFの在庫編集画面 + リッチメニュー | 完了（LINE上とD1で動作確認済み。`main` にマージ済み） |
 | 4 | チャットでの献立相談（Gemini接続） | 完了（本番で、LINEアプリへの提案の受信を確認済み） |
-| 5 | 食べたものの記録（meals + API + 画面のタブ + リッチメニューの2分割）と、提案への反映 | 実装済み（未プッシュ・未デプロイ） |
+| 5 | 食べたものの記録（meals + API + 画面のタブ + リッチメニューの2分割）と、提案への反映 | 完了（本番で動作確認済み。`main` にマージ済み） |
 | 6 | 毎朝9時のPush | 未着手 |
 
 ## ステップ2で作ったもの
@@ -45,7 +45,7 @@
 
 - `src/core/suggest.ts`: 提案の出力スキーマ（`zod/mini`）、プロンプトの組み立て、返信の整形、定型文（在庫が空、失敗）。同じスキーマから、Geminiに渡すJSONスキーマも作る
 - `src/clients/gemini.ts`: `generateJson`。`generateContent` を呼び、JSONで受ける。キーはヘッダで送る
-- `src/handlers/suggest.ts`: 在庫の取得 → Gemini → 検証 → Reply の流れ。`suggestionText` は、失敗してもお詫びの文面を返す（ステップ5で再利用する）
+- `src/handlers/suggest.ts`: 在庫の取得 → Gemini → 検証 → Reply の流れ。`suggestionText` は、失敗してもお詫びの文面を返す（ステップ6で再利用する）
 - `src/handlers/webhook.ts`: オウム返しをやめ、先に200を返して、提案を応答のあとで行う（`waitUntil`）。1対1のテキストだけ扱う
 - `scripts/try-gemini.ts`（`pnpm run try:gemini`）: 本番と同じ関数で、本物のAPIを1回呼ぶ確認用
 - 環境変数: `GEMINI_API_KEY`（秘密）、`GEMINI_MODEL`（`wrangler.jsonc` の `vars`。いまは `gemini-3.8-flash`）
@@ -126,11 +126,6 @@
 
 残り:
 
-- **ステップ5の本番反映（順番どおりに）**:
-  1. 本番D1にマイグレーションを適用: `pnpm exec wrangler d1 migrations apply kondate-bot --remote`（`0002_create_meals.sql` だけが出ることを確認）
-  2. 再デプロイ: `pnpm exec wrangler deploy`
-  3. リッチメニューを、2分割のテンプレートで作り直す（LINE Official Account Manager）。左「在庫」は `https://liff.line.me/<LIFF ID>?tab=pantry`、右「食べたもの」は `https://liff.line.me/<LIFF ID>?tab=meals`
-  4. LINEで確かめる: 右のボタンで食べたものタブが開く（`?tab=` が画面に渡ること）、記録・削除ができる、在庫タブにも切り替えられる、食事を記録したあとの提案に反映される
 - ローカルの `wrangler dev` を使うときは、`pnpm run db:migrate:local` で `0002` を適用する
 - **漏れたAPIキーの無効化**: ステップ4の確認中に、Gemini APIキーがチャットに貼られた。AI Studio で、そのキーを削除して作り直したか確認する（本番の `GEMINI_API_KEY` が新しいキーかも）
 - **費用の見張り**: AI Studio の利用状況を、ときどき見る。利用回数の制限（1人あたり）は、まだ入れていない。入れるなら、D1に表を足す形で相談する
@@ -139,6 +134,7 @@
 
 済:
 
+- ステップ5の本番反映（2026-11-24）: 本番D1に `0002_create_meals.sql` を適用、再デプロイ、リッチメニューを2分割に（左「在庫」は `?tab=pantry`、右「食べたもの」は `?tab=meals`）、LINE上での動作確認
 - 本番D1の作成とマイグレーション（2026-11-23）。`wrangler d1 create` の「設定を自動追加しますか？」には `n` と答える（バインディング名が `kondate_bot` になり、コードの `env.DB` と合わなくなるため）
 - デプロイ（`https://kondate-bot.<サブドメイン>.workers.dev`）。初回は、アップロード直後の確認で `10007 This Worker does not exist` と出て失敗したが、同じコマンドの再実行で通った（反映待ちと見ている）
 - 本番の秘密の登録（`LINE_CHANNEL_SECRET`、`LINE_CHANNEL_ACCESS_TOKEN`、`GEMINI_API_KEY`）と、LINEの Webhook URL の付け替え
