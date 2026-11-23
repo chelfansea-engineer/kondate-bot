@@ -1,10 +1,13 @@
 import type { Context } from "hono";
-import { replyMessage, verifySignature } from "../clients/line";
+import { verifySignature } from "../clients/line";
 import type { Env } from "../env";
+import { replyWithSuggestion } from "./suggest";
 
 type TextMessageEvent = {
   type: "message";
   replyToken: string;
+  /** 1対1のトークだけを扱う（グループの発言には答えない） */
+  source: { type: "user"; userId: string };
   message: { type: "text"; text: string };
 };
 
@@ -16,6 +19,14 @@ function isTextMessageEvent(event: unknown): event is TextMessageEvent {
   if (!isRecord(event)) return false;
   if (event.type !== "message") return false;
   if (typeof event.replyToken !== "string") return false;
+  const source = event.source;
+  if (
+    !isRecord(source) ||
+    source.type !== "user" ||
+    typeof source.userId !== "string"
+  ) {
+    return false;
+  }
   const message = event.message;
   return (
     isRecord(message) &&
@@ -50,18 +61,17 @@ export async function handleWebhook(
     return c.text("invalid signature", 401);
   }
 
+  // Geminiは数秒かかるので、LINEには先に200を返し、提案と返信は応答のあとで行う。
+  // 1件の失敗が残りを止めないよう、イベントごとに独立して動かす
   for (const event of extractEvents(rawBody)) {
     if (!isTextMessageEvent(event)) continue;
-    try {
-      await replyMessage(
-        event.replyToken,
-        event.message.text,
-        c.env.LINE_CHANNEL_ACCESS_TOKEN,
-      );
-    } catch (error) {
-      // 返信に失敗してもLINEには200を返す（1件の失敗で残りを止めない）
-      console.error(error);
-    }
+    c.executionCtx.waitUntil(
+      replyWithSuggestion(c.env, {
+        replyToken: event.replyToken,
+        userId: event.source.userId,
+        text: event.message.text,
+      }),
+    );
   }
   return c.text("ok");
 }
