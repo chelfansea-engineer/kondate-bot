@@ -3,7 +3,7 @@ import {
   waitOnExecutionContext,
 } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { addPantryItem } from "../src/clients/d1";
+import { addMeal, addPantryItem } from "../src/clients/d1";
 import { generateJson } from "../src/clients/gemini";
 import { replyMessage } from "../src/clients/line";
 import { EMPTY_PANTRY_REPLY, FAILURE_REPLY } from "../src/core/suggest";
@@ -74,6 +74,9 @@ const soy = { name: "醤油", category: "seasoning", memo: "" } as const;
 
 describe("POST /webhook", () => {
   beforeEach(async () => {
+    // 日本時間で 2026-11-24 の朝9時30分。直近7日の境目を、実際の日付に頼らず確かめるため
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-24T00:30:00Z"));
     blockNetwork();
     await resetDb();
     replyMock.mockReset();
@@ -83,6 +86,7 @@ describe("POST /webhook", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
@@ -129,6 +133,58 @@ describe("POST /webhook", () => {
       const user = geminiMock.mock.calls[0]?.[0].user ?? "";
       expect(user).toContain("Bさんの卵");
       expect(user).not.toContain("Aさんの玉ねぎ");
+    });
+
+    it("最近7日の食事を、プロンプトに入れる（8日前は入れない）", async () => {
+      await addPantryItem(TEST_ENV.DB, "U123", onion);
+      await addMeal(TEST_ENV.DB, "U123", {
+        name: "昨日のカレー",
+        eatenOn: "2026-11-23",
+      });
+      await addMeal(TEST_ENV.DB, "U123", {
+        name: "6日前の鍋",
+        eatenOn: "2026-11-18",
+      });
+      await addMeal(TEST_ENV.DB, "U123", {
+        name: "7日前の丼",
+        eatenOn: "2026-11-17",
+      });
+
+      await postSigned({ events: [textEvent("x")] });
+
+      const user = geminiMock.mock.calls[0]?.[0].user ?? "";
+      expect(user).toContain("- 11/23（昨日） 昨日のカレー");
+      expect(user).toContain("- 11/18 6日前の鍋");
+      expect(user).not.toContain("7日前の丼");
+    });
+
+    it("送信者本人の食事だけを、プロンプトに入れる", async () => {
+      await addPantryItem(TEST_ENV.DB, "U456", egg);
+      await addMeal(TEST_ENV.DB, "U123", {
+        name: "Aさんの鍋",
+        eatenOn: "2026-11-23",
+      });
+      await addMeal(TEST_ENV.DB, "U456", {
+        name: "Bさんのカレー",
+        eatenOn: "2026-11-23",
+      });
+
+      await postSigned({ events: [textEvent("x", { userId: "U456" })] });
+
+      const user = geminiMock.mock.calls[0]?.[0].user ?? "";
+      expect(user).toContain("Bさんのカレー");
+      expect(user).not.toContain("Aさんの鍋");
+    });
+
+    it("食事が1件もなくても、提案を返す", async () => {
+      await addPantryItem(TEST_ENV.DB, "U123", onion);
+
+      await postSigned({ events: [textEvent("x")] });
+
+      expect(geminiMock.mock.calls[0]?.[0].user).toContain(
+        "<meals>\n- なし\n</meals>",
+      );
+      expect(replyMock).toHaveBeenCalledTimes(1);
     });
 
     it("複数のメッセージに、それぞれ返す", async () => {

@@ -1,6 +1,7 @@
-import { listPantryItems } from "../clients/d1";
+import { listMeals, listPantryItems } from "../clients/d1";
 import { generateJson } from "../clients/gemini";
 import { replyMessage } from "../clients/line";
+import { jstDate, recentSince } from "../core/meals";
 import {
   buildPrompt,
   EMPTY_PANTRY_REPLY,
@@ -14,7 +15,7 @@ import type { Env } from "../env";
 const SCHEMA = suggestionJsonSchema();
 
 /**
- * ユーザーの在庫と、気分・希望から、返信の文面を作る。
+ * ユーザーの在庫・最近の食事と、気分・希望から、返信の文面を作る。
  * 失敗しても例外は投げず、お詫びの文面を返す。
  */
 export async function suggestionText(
@@ -23,11 +24,15 @@ export async function suggestionText(
   message: string,
 ): Promise<string> {
   try {
-    const pantry = await listPantryItems(env.DB, userId);
+    const today = jstDate(new Date());
+    const [pantry, meals] = await Promise.all([
+      listPantryItems(env.DB, userId),
+      listMeals(env.DB, userId, recentSince(today)),
+    ]);
     // 在庫がなければ、Geminiを呼ばない
     if (pantry.length === 0) return EMPTY_PANTRY_REPLY;
 
-    const prompt = buildPrompt({ message, pantry });
+    const prompt = buildPrompt({ message, pantry, meals, today });
     const raw = await generateJson({
       apiKey: env.GEMINI_API_KEY,
       model: env.GEMINI_MODEL,

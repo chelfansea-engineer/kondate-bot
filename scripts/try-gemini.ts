@@ -31,9 +31,18 @@ const pantry = [
   { id: 4, name: "醤油", category: "seasoning", memo: "", createdAt: "" },
   { id: 5, name: "味噌", category: "seasoning", memo: "", createdAt: "" },
 ] as const;
+const meals = [
+  { id: 1, name: "カレー", eatenOn: "2026-11-23", createdAt: "" },
+  { id: 2, name: "豚の生姜焼き", eatenOn: "2026-11-22", createdAt: "" },
+];
 const message = process.argv[2] ?? "さっぱりしたい";
 
-const prompt = buildPrompt({ message, pantry: [...pantry] });
+const prompt = buildPrompt({
+  message,
+  pantry: [...pantry],
+  meals,
+  today: "2026-11-24",
+});
 const startedAt = Date.now();
 try {
   const raw = await generateJson({
