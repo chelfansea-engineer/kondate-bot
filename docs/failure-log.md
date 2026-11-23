@@ -10,3 +10,4 @@
 | 2026-11-15 | Biome の自動整形が CLAUDE.md と README.md まで書き換え、手で編集すると check が落ちる状態になった | 設定化: biome.json で Markdown を対象外にした |
 | 2026-11-15 | シークレット未設定のとき /webhook が500になった。テストでは気づけず、dev で試して見つけた | テスト化: 未設定なら署名検証が false になるテストを追加（test/line.test.ts） |
 | 2026-11-15 | CLAUDE.md のコマンド表記（npm）とパッケージ管理（pnpm）がずれたまま計画を出した | pnpm に統一済み。計画時に CLAUDE.md と実物のずれを見つけたら、その場で指摘する |
+| 2026-11-23 | テスト基盤で setupFiles から `cloudflare:test` を読み込んだ結果、Worker本体が本物の clients ごとキャッシュされ、テスト側の `vi.mock` が効かなくなった。Webhookテスト3件が落ちて気づいたが、その間テストは本物のLINE Reply APIを叩いていた | 構造化: setupFiles をやめて `resetDb()` をテストから呼ぶ形にし、`blockNetwork()` でテスト中の外部通信を失敗させる（webhook / pantry-api テストの beforeEach） |

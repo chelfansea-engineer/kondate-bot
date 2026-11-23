@@ -25,24 +25,25 @@
 | ----------------------------------------- | ----------------------------------- |
 | POST /webhook                             | LINEからのメッセージ受信            |
 | GET /liff/*                               | 在庫編集画面の配信（素のHTML + JS） |
-| GET/POST/DELETE /api/pantry               | 画面から呼ぶ在庫API                 |
+| GET/POST /api/pantry, DELETE /api/pantry/:id | 画面から呼ぶ在庫API（Authorization: Bearer <LIFFのIDトークン>） |
 | scheduled（cron: `0 0 * * *` = 9:00 JST） | 毎朝の献立Push                      |
 
 ## ディレクトリ
 
 - src/index.ts … Honoのルート定義と scheduled。処理は書かない
 - src/env.ts … 環境変数（Env）の型
-- src/handlers/ … 各入口の処理（いまは webhook.ts のみ）
-- src/clients/ … LINE / Gemini / D1 の薄いラッパー（いまは line.ts のみ）
-- test/ … テスト。helpers.ts に署名生成などの共通処理
+- src/handlers/ … 各入口の処理（webhook.ts / auth.ts（/api/* のトークン検証）/ pantry.ts）
+- src/core/ … 純粋な関数と型（いまは在庫の入力検証 pantry.ts。献立ロジックもここ。外部APIを呼ばない）
+- src/clients/ … LINE / Gemini / D1 の薄いラッパー（いまは line.ts / d1.ts）
+- migrations/ … D1のスキーマ（0001_create_pantry_items.sql）
+- scripts/ … 開発用スクリプト（simulate.ts）
+- test/ … テスト。helpers.ts に署名生成・DB初期化・外部通信ガード
 - docs/progress.md … 進み具合、決めたこと、ハマったこと
 - .dev.vars.example … 環境変数の見本（本物の .dev.vars は各自で作る）
 
 まだ無いもの（該当ステップで作る）:
 
-- src/core/ … 献立ロジック（純粋な関数。外部APIを呼ばない）
 - public/liff/ … 在庫編集画面
-- migrations/ … D1のスキーマ
 
 ## データ
 
@@ -54,7 +55,8 @@
 - pnpm test … 単体テスト
 - pnpm run check … 型チェック + lint
 - pnpm run dev … ローカル起動
-- pnpm run simulate … 擬似Webhookを送って動作確認（未実装。ステップ2で作る）
+- pnpm run simulate … 擬似Webhookを送って動作確認（`LINE_CHANNEL_SECRET=... pnpm run simulate [URL] [本文]`。先に dev を起動する）
+- pnpm run db:migrate:local … ローカルD1にマイグレーションを適用（本番は人間が実行）
 
 ## ルール
 
