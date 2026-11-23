@@ -34,7 +34,10 @@ let migrated: Promise<void> | undefined;
 export async function resetDb(): Promise<void> {
   migrated ??= applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
   await migrated;
-  await env.DB.prepare("DELETE FROM pantry_items").run();
+  await env.DB.batch([
+    env.DB.prepare("DELETE FROM pantry_items"),
+    env.DB.prepare("DELETE FROM meals"),
+  ]);
 }
 
 /** LINEと同じ方法（HMAC-SHA256 → base64）で署名を作る */

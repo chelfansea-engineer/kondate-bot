@@ -82,6 +82,7 @@ label {
 }
 
 input[type="text"],
+input[type="date"],
 input:not([type]) {
   width: 100%;
   min-height: 44px;
@@ -189,4 +190,41 @@ button.delete[data-armed="1"] {
   border-color: var(--danger);
   background: var(--danger);
   color: #ffffff;
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-bottom: 16px;
+  padding: 4px;
+  background: var(--line);
+  border-radius: 10px;
+}
+
+.tabs button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+
+.tabs button[aria-selected="true"] {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+}
+
+h3 {
+  margin: 16px 0 6px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+#meal-list h3:first-child {
+  margin-top: 0;
+}
+
+.empty-note {
+  margin: 0;
+  color: var(--muted);
 }

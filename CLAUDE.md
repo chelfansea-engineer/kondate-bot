@@ -5,7 +5,8 @@
 家にある食材・調味料をもとに、今晩の献立を提案するLINEボット。
 
 - 在庫の登録・編集は、LINE内で開く画面（LIFF）で行う
-- 毎朝9時（JST）に、在庫をもとにした3品をPushで提案する
+- 食べたものを、LINE内の画面（LIFF）で記録する。直近7日の食事を、提案に反映する
+- 毎朝9時（JST）に、在庫と最近の食事をもとにした3品をPushで提案する（気分の入力なし）
 - チャットで気分を伝えると、それに合う料理をReplyで提案する
 
 ## スタック
@@ -25,19 +26,20 @@
 | 入口                                      | 役割                                |
 | ----------------------------------------- | ----------------------------------- |
 | POST /webhook                             | LINEからのメッセージ受信            |
-| GET /liff/*                               | 在庫編集画面の配信（素のHTML + JS。静的アセットとして配信） |
+| GET /liff/*                               | 在庫・食べたものの画面の配信（素のHTML + JS。静的アセットとして配信） |
 | GET/POST /api/pantry, DELETE /api/pantry/:id | 画面から呼ぶ在庫API（Authorization: Bearer <LIFFのIDトークン>） |
+| GET/POST /api/meals, DELETE /api/meals/:id | 画面から呼ぶ食事API（同上） |
 | scheduled（cron: `0 0 * * *` = 9:00 JST） | 毎朝の献立Push                      |
 
 ## ディレクトリ
 
 - src/index.ts … Honoのルート定義と scheduled。処理は書かない
 - src/env.ts … 環境変数（Env）の型
-- src/handlers/ … 各入口の処理（webhook.ts / auth.ts（/api/* のトークン検証）/ pantry.ts / suggest.ts（献立の提案の流れ））
-- src/core/ … 純粋な関数と型（pantry.ts: 在庫の入力検証 / suggest.ts: 提案の出力スキーマ・プロンプト・返信の整形。外部APIを呼ばない）
+- src/handlers/ … 各入口の処理（webhook.ts / auth.ts（/api/* のトークン検証）/ pantry.ts / meals.ts / suggest.ts（献立の提案の流れ））
+- src/core/ … 純粋な関数と型（pantry.ts: 在庫の入力検証 / meals.ts: 食事の入力検証・日本時間の日付 / suggest.ts: 提案の出力スキーマ・プロンプト・返信の整形 / id.ts: パスのID。外部APIを呼ばない）
 - src/clients/ … LINE / Gemini / D1 の薄いラッパー（line.ts / gemini.ts / d1.ts）
-- migrations/ … D1のスキーマ（0001_create_pantry_items.sql）
-- public/liff/ … 在庫編集画面（素のHTML + JS。index.html / app.js / pantry-view.js / style.css）
+- migrations/ … D1のスキーマ（0001_create_pantry_items.sql / 0002_create_meals.sql）
+- public/liff/ … 在庫・食べたものの画面（素のHTML + JS。「在庫」「食べたもの」の2タブ）
 - scripts/ … 開発用スクリプト（simulate.ts / check-docs.ts）
 - test/ … テスト。helpers.ts に署名生成・DB初期化・外部通信ガード
 - docs/design.md … 設計書（構成図、モジュール依存図、ER図、API仕様、ファイル一覧）
@@ -48,6 +50,9 @@
 
 在庫（pantry_items）: id / user_id / name / category（food | seasoning）/ memo / created_at
 数量と賞味期限は持たない。必要になったら相談してから足す。
+
+食事（meals）: id / user_id / eaten_on（日本時間の YYYY-MM-DD）/ name / created_at
+朝・昼・晩の区別とメモは持たない。必要になったら相談してから足す。
 
 ## コマンド
 
@@ -70,6 +75,7 @@
 
 - 変更後は pnpm test と pnpm run check を通してから、完了報告とコミットを行う
 - 新しい処理にはテストを付ける。テストを消したり弱めたりして通さない
+- ユーザーごとに絞る処理（在庫・食事など）のテストは、複数のユーザーで書き、「固定のIDを使う」「絞り込みを外す」と壊しても落ちることを、実装を壊して確かめる
 
 ### ステップ完了時
 
@@ -126,7 +132,8 @@
 2. 在庫API + D1のテーブル
 3. LIFFの在庫編集画面 + リッチメニュー
 4. チャットでの献立相談（Gemini接続）
-5. 毎朝9時のPush
+5. 食べたものの記録（meals + API + 画面のタブ + リッチメニューの2分割）と、提案への反映
+6. 毎朝9時のPush
 
 ## 失敗ログ（ラチェット）
 
