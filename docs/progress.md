@@ -1,6 +1,6 @@
 # 進み具合
 
-最終更新: 2026-11-23
+最終更新: 2026-11-23（設計書を追加）
 
 ## いまどこ
 
@@ -26,6 +26,8 @@
 - `src/handlers/pantry.ts`: `GET /api/pantry`、`POST /api/pantry`（201）、`DELETE /api/pantry/:id`（204、他人の在庫と存在しない在庫はどちらも404）
 - `scripts/simulate.ts`: 正しい署名（期待200）とでたらめな署名（期待401）の擬似Webhookを送る
 - テスト67件（ステップ1の15件を含む）。D1は本物のローカルD1、LINEへの通信はモック
+- `docs/design.md`: 現状の設計書（構成図、モジュール依存図、シーケンス図、ER図、API仕様、ファイル一覧）
+- `scripts/check-docs.ts`（`pnpm run check:docs`）: 設計書のファイル一覧・依存図・ER図を実物と突き合わせる。ステップ完了時のルールは CLAUDE.md に書いた
 
 ## 決めたこと
 
@@ -35,6 +37,9 @@
 - zod はまだ入れず、入力検証は手書き（`parsePantryInput`）。入れるのは依存追加なので相談してから。ステップ4で入れるなら置き換える
 - 新しい環境変数は `LIFF_CHANNEL_ID`（LIFFを載せたLINEログインチャネルのID）。`.dev.vars.example` に追記済み
 - 在庫IDは整数の自動採番。画面で重複する名前も許す
+
+- 設計書の更新は、ステップ完了時に行う（CLAUDE.md「ステップ完了時」）。`check:docs` は `pnpm run check` には含めていない。作業の途中で落ちるのを避けるため
+- `@types/node` は入れず、`scripts/node-shims.d.ts` に使う分だけの型宣言を置いた。入れるなら依存追加なので相談してから
 
 ## ハマったこと
 

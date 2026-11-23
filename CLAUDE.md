@@ -36,8 +36,9 @@
 - src/core/ … 純粋な関数と型（いまは在庫の入力検証 pantry.ts。献立ロジックもここ。外部APIを呼ばない）
 - src/clients/ … LINE / Gemini / D1 の薄いラッパー（いまは line.ts / d1.ts）
 - migrations/ … D1のスキーマ（0001_create_pantry_items.sql）
-- scripts/ … 開発用スクリプト（simulate.ts）
+- scripts/ … 開発用スクリプト（simulate.ts / check-docs.ts）
 - test/ … テスト。helpers.ts に署名生成・DB初期化・外部通信ガード
+- docs/design.md … 設計書（構成図、モジュール依存図、ER図、API仕様、ファイル一覧）
 - docs/progress.md … 進み具合、決めたこと、ハマったこと
 - .dev.vars.example … 環境変数の見本（本物の .dev.vars は各自で作る）
 
@@ -56,6 +57,7 @@
 - pnpm run check … 型チェック + lint
 - pnpm run dev … ローカル起動
 - pnpm run simulate … 擬似Webhookを送って動作確認（`LINE_CHANNEL_SECRET=... pnpm run simulate [URL] [本文]`。先に dev を起動する）
+- pnpm run check:docs … 設計書（docs/design.md）と実物の突き合わせ
 - pnpm run db:migrate:local … ローカルD1にマイグレーションを適用（本番は人間が実行）
 
 ## ルール
@@ -69,6 +71,19 @@
 
 - 変更後は pnpm test と pnpm run check を通してから、完了報告とコミットを行う
 - 新しい処理にはテストを付ける。テストを消したり弱めたりして通さない
+
+### ステップ完了時
+
+「作る順番」の1ステップを終えるたびに、次をやってから完了を報告する。
+
+- 作った・消した・移したファイルを洗い出し、docs/design.md の「ファイル一覧」に反映する
+- 依存図（`%% check:deps`）とER図（`%% check:er`）を、実物の import とスキーマに合わせる
+- API仕様、環境変数、不変条件、テスト構成の表に変更があれば直す
+- `pnpm run check:docs` を通す。通らなければ、設計書か実装のどちらが正しいかを確かめて直す
+- 設計書の「最終確認」の日付を更新する。「まだ決まっていないこと」と「今後のステップ」も、進んだ分だけ見直す
+- docs/progress.md を更新する（進み具合、決めたこと、ハマったこと）
+
+`check:docs` が見るのは、ファイル・矢印・列の一致まで。図の意味が正しいかは、人が読んで確かめる。
 
 ### 計画
 
