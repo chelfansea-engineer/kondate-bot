@@ -9,6 +9,7 @@
     "noUncheckedIndexedAccess": true,
     "noEmit": true,
     "skipLibCheck": true,
+    "allowJs": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true
   },
