@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { replyMessage } from "../src/clients/line";
 import app from "../src/index";
-import { sign, TEST_ENV } from "./helpers";
+import { blockNetwork, sign, TEST_ENV } from "./helpers";
 
 // LINEへの通信は必ずモックする。署名検証は本物を使う
 vi.mock("../src/clients/line", async (importOriginal) => {
@@ -35,8 +35,13 @@ async function postSigned(payload: unknown) {
 
 describe("POST /webhook", () => {
   beforeEach(() => {
+    blockNetwork();
     replyMock.mockReset();
     replyMock.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("正しい署名のテキストメッセージをオウム返しする", async () => {
