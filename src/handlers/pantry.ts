@@ -4,6 +4,7 @@ import {
   deletePantryItem,
   listPantryItems,
 } from "../clients/d1";
+import { parseId } from "../core/id";
 import { parsePantryInput } from "../core/pantry";
 import type { AppEnv } from "../env";
 
@@ -24,14 +25,10 @@ pantryRoutes.post("/", async (c) => {
 });
 
 pantryRoutes.delete("/:id", async (c) => {
-  const idParam = c.req.param("id");
-  if (!/^[1-9]\d*$/.test(idParam)) return c.json({ error: "invalid id" }, 400);
+  const id = parseId(c.req.param("id"));
+  if (id === null) return c.json({ error: "invalid id" }, 400);
 
-  const deleted = await deletePantryItem(
-    c.env.DB,
-    c.var.userId,
-    Number(idParam),
-  );
+  const deleted = await deletePantryItem(c.env.DB, c.var.userId, id);
   // 存在しない在庫と他人の在庫は区別しない
   if (!deleted) return c.json({ error: "not found" }, 404);
   return c.body(null, 204);
