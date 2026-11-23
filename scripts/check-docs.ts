@@ -4,7 +4,7 @@
  *   pnpm run check:docs
  *
  * 見るもの:
- *   1. ファイル一覧   … src/ test/ scripts/ migrations/ の全ファイルが、第10章の表にあるか（逆も）
+ *   1. ファイル一覧   … src/ test/ scripts/ migrations/ public/ の全ファイルが、第10章の表にあるか（逆も）
  *   2. モジュール依存図 … `%% check:deps` の図の矢印が、src/ の相対 import と一致するか
  *   3. ER図           … `%% check:er` の図の列が、migrations/ の CREATE TABLE と一致するか
  * 図の中身が正しいか（意味）までは見ない。それは人が読んで確かめる。
@@ -13,7 +13,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { posix } from "node:path";
 
 const DESIGN = "docs/design.md";
-const LISTED_DIRS = ["src", "test", "scripts", "migrations"];
+const LISTED_DIRS = ["src", "test", "scripts", "migrations", "public"];
 
 function walk(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -48,9 +48,11 @@ const problems: string[] = [];
 // 1. ファイル一覧
 const actualFiles = new Set(LISTED_DIRS.flatMap(walk));
 const documentedFiles = new Set(
-  [...doc.matchAll(/^\| `((?:src|test|scripts|migrations)\/[^`]+)` \|/gm)].map(
-    (m) => m[1] ?? "",
-  ),
+  [
+    ...doc.matchAll(
+      /^\| `((?:src|test|scripts|migrations|public)\/[^`]+)` \|/gm,
+    ),
+  ].map((m) => m[1] ?? ""),
 );
 problems.push(...diff("ファイル一覧", actualFiles, documentedFiles));
 
