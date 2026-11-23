@@ -8,7 +8,8 @@
     "check": "tsc --noEmit && biome check .",
     "simulate": "node scripts/simulate.ts",
     "db:migrate:local": "wrangler d1 migrations apply kondate-bot --local",
-    "check:docs": "node scripts/check-docs.ts"
+    "check:docs": "node scripts/check-docs.ts",
+    "try:gemini": "node scripts/try-gemini.ts"
   },
   "dependencies": {
     "hono": "^4.13.18",

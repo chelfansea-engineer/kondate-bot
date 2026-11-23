@@ -3,6 +3,10 @@ export type Env = {
   LINE_CHANNEL_ACCESS_TOKEN: string;
   /** LIFFを載せたLINEログインチャネルのID。IDトークンの検証で audience として使う */
   LIFF_CHANNEL_ID: string;
+  /** Gemini APIのキー（秘密） */
+  GEMINI_API_KEY: string;
+  /** 使うGeminiのモデルID。コードには書かない */
+  GEMINI_MODEL: string;
   DB: D1Database;
 };
 

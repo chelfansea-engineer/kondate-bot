@@ -6,6 +6,8 @@ export const TEST_ENV: Env = {
   LINE_CHANNEL_SECRET: "test-channel-secret",
   LINE_CHANNEL_ACCESS_TOKEN: "test-access-token",
   LIFF_CHANNEL_ID: "test-liff-channel-id",
+  GEMINI_API_KEY: "test-gemini-key",
+  GEMINI_MODEL: "test-gemini-model",
   DB: env.DB,
 };
 

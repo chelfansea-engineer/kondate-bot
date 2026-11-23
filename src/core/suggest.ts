@@ -1,5 +1,6 @@
 import * as z from "zod/mini";
-import { CATEGORIES, type PantryItem } from "./pantry";
+// scripts/try-gemini.ts が Node で直接読み込むため、このファイルだけ拡張子を付ける
+import { CATEGORIES, type PantryItem } from "./pantry.ts";
 
 // 献立の提案。Geminiに渡す指示、返ってきたJSONの検証、返信の文面を、純粋な関数で作る
 
