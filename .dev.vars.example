@@ -1,5 +1,5 @@
 # このファイルを .dev.vars にコピーして値を入れる（.dev.vars はコミットしない）
 LINE_CHANNEL_SECRET=
 LINE_CHANNEL_ACCESS_TOKEN=
-# LIFFアプリを作ったLINEログインチャネルのチャネルID
-LIFF_CHANNEL_ID=
+# LIFF_CHANNEL_ID は秘密ではないので wrangler.jsonc の vars に入れている。
+# ここに空で書くと vars を上書きして、トークン検証が常に失敗する

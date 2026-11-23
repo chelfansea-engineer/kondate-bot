@@ -3,12 +3,19 @@
   "name": "kondate-bot",
   "main": "src/index.ts",
   "compatibility_date": "2026-11-01",
+  // 公開URLは workers.dev の1本だけにする。バージョンごとのプレビューURLは作らない
+  "workers_dev": true,
+  "preview_urls": false,
+  "vars": {
+    // LIFFを載せたLINEログインチャネルのチャネルID。認証情報ではない（IDトークン検証の audience）
+    "LIFF_CHANNEL_ID": "2012765529"
+  },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "kondate-bot",
-      // ローカル開発とテストでは使われない。本番は `wrangler d1 create kondate-bot` で得たIDに差し替える（人間が実行）
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      // 本番D1のID（`wrangler d1 create kondate-bot` の結果）。ローカル開発とテストでは使われない
+      "database_id": "7bc0a1ee-865f-4d00-9756-35fd292dd41c",
       "migrations_dir": "migrations"
     }
   ]

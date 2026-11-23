@@ -208,10 +208,10 @@ erDiagram
 | --- | --- | --- |
 | `LINE_CHANNEL_SECRET` | 秘密 | Webhookの署名検証 |
 | `LINE_CHANNEL_ACCESS_TOKEN` | 秘密 | Reply API の認証 |
-| `LIFF_CHANNEL_ID` | 設定値 | IDトークンの検証で、audience として使う（LIFFを載せたLINEログインチャネルのID） |
-| `DB` | D1バインディング | `kondate-bot`。`wrangler.jsonc` の `database_id` は仮の値で、本番用に差し替えが必要 |
+| `LIFF_CHANNEL_ID` | 設定値 | IDトークンの検証で、audience として使う（LIFFを載せたLINEログインチャネルのID）。秘密ではないので `wrangler.jsonc` の `vars` に置く |
+| `DB` | D1バインディング | `kondate-bot`（本番D1は作成済み。`wrangler.jsonc` の `database_id` に本番のIDを入れている）。バインディング名は必ず `DB` |
 
-ローカルでは `.dev.vars`（コミットしない）に置く。見本は `.dev.vars.example`。未実装の `GEMINI_MODEL` などは、使うステップで足す。
+秘密の2つは、ローカルでは `.dev.vars`（コミットしない）、本番では `wrangler secret put` で置く。見本は `.dev.vars.example`。未実装の `GEMINI_MODEL` などは、使うステップで足す。
 
 ## 7. 外部サービスの呼び出し
 

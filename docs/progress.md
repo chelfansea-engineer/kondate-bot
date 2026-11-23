@@ -5,13 +5,13 @@
 ## いまどこ
 
 - ステップ1（オウム返しボット）… 完了。実際のLINEで確認済み
-- ステップ2（在庫API + D1のテーブル + `pnpm run simulate`）… 実装済み。ローカルのブランチ `feature/step2-pantry-api` にコミット済みで、未プッシュ
+- ステップ2（在庫API + D1のテーブル + `pnpm run simulate`）… 完了。`main` にマージしてプッシュ済み。本番D1も作成・マイグレーション済み
 - 次はステップ3（LIFFの在庫編集画面 + リッチメニュー）。その前に、下の「人間がやること」を済ませる
 
 | ステップ | 内容 | 状態 |
 | --- | --- | --- |
 | 1 | オウム返しボット（Webhook + 署名検証 + Reply） | 完了 |
-| 2 | 在庫API + D1のテーブル | 実装済み（未プッシュ。本番D1は未作成） |
+| 2 | 在庫API + D1のテーブル | 完了（`main` にマージ・プッシュ済み。本番D1の作成とマイグレーションも済） |
 | 3 | LIFFの在庫編集画面 + リッチメニュー | 未着手 |
 | 4 | チャットでの献立相談（Gemini接続） | 未着手 |
 | 5 | 毎朝9時のPush | 未着手 |
@@ -50,10 +50,13 @@
 
 ## 人間がやること
 
-- 本番D1を作る: `wrangler d1 create kondate-bot`。出力された `database_id` を `wrangler.jsonc` の仮の値（`00000000-...`）と差し替える
-- 本番にマイグレーションを適用する: `wrangler d1 migrations apply kondate-bot --remote`
-- LINEログインチャネルを作り、LIFFアプリを登録する（スコープに `openid` が必要）。このチャネルは、Messaging API のチャネルと同じプロバイダーにする。別のプロバイダーだとユーザーIDが一致しない
-- `.dev.vars` に `LIFF_CHANNEL_ID`（LINEログインチャネルのチャネルID）を追記する。本番は `wrangler secret put LIFF_CHANNEL_ID`
-- 常時動かすにはデプロイが必要（`wrangler deploy` と、`wrangler secret put` で3つの値を登録）
+- 本番D1を作る: 済（2026-11-23）。`database_id` は `wrangler.jsonc` に反映済み。`wrangler d1 create` の「設定を自動追加しますか？」には `n` と答える（バインディング名が `kondate_bot` になり、コードの `env.DB` と合わなくなるため）
+- 本番にマイグレーションを適用する: 済（2026-11-23。`0001_create_pantry_items.sql` を適用）
+- LINEログインチャネルを作った（済）。LIFFアプリの登録は、エンドポイントURL（デプロイ後のドメイン）が決まってから。LIFFアプリを登録する（スコープに `openid` が必要）。このチャネルは、Messaging API のチャネルと同じプロバイダーにする。別のプロバイダーだとユーザーIDが一致しない
+- `LIFF_CHANNEL_ID`: 済。秘密ではないので `wrangler.jsonc` の `vars` に入れた（2026-11-23、LINEログインチャネルのチャネルID）。`.dev.vars` に空で書くと上書きされるので書かない
+- デプロイ: 済（2026-11-23。`https://kondate-bot.<サブドメイン>.workers.dev`）。初回は、アップロード直後の確認で `10007 This Worker does not exist` と出て失敗したが、同じコマンドの再実行で通った（反映待ちと見ている）
+- 本番に秘密を登録する: `wrangler secret put LINE_CHANNEL_SECRET` と `wrangler secret put LINE_CHANNEL_ACCESS_TOKEN`（未了）
+- LINEの Webhook URL を `https://<ドメイン>/webhook` に付け替え、「検証」を通す（未了。トンネルは不要になる）
+- 設定を変えたら再デプロイが要る（`wrangler.jsonc` の `workers_dev` / `preview_urls` の明示は次回のデプロイで反映）
 - ステップ1とステップ2のブランチのプッシュ、PR作成、マージ
 - `pnpm install` 時のビルドスクリプト警告（esbuild / workerd）を消すなら `pnpm approve-builds`
