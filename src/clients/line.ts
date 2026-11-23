@@ -1,4 +1,5 @@
 const REPLY_ENDPOINT = "https://api.line.me/v2/bot/message/reply";
+const ID_TOKEN_VERIFY_ENDPOINT = "https://api.line.me/oauth2/v2.1/verify";
 
 const encoder = new TextEncoder();
 
@@ -65,4 +66,32 @@ export async function replyMessage(
   if (!res.ok) {
     throw new Error(`LINE Reply API failed: ${res.status} ${await res.text()}`);
   }
+}
+
+/**
+ * LIFFのIDトークンをLINEのサーバーで検証し、ユーザーID（sub）を返す。
+ * 署名・有効期限・audience（channelId）はLINE側が確かめる。
+ * トークンが不正なら null。LINEの障害など検証できなかったときは例外を投げる。
+ */
+export async function verifyIdToken(
+  idToken: string,
+  channelId: string,
+): Promise<string | null> {
+  // チャネルIDが未設定なら検証しようがないので、LINEを呼ばずに拒否する
+  if (!idToken || !channelId) return null;
+
+  const res = await fetch(ID_TOKEN_VERIFY_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ id_token: idToken, client_id: channelId }),
+  });
+  if (res.status === 400) return null;
+  if (!res.ok) {
+    throw new Error(`LINE ID token verify failed: ${res.status}`);
+  }
+
+  const body: unknown = await res.json();
+  if (typeof body !== "object" || body === null) return null;
+  const { sub } = body as Record<string, unknown>;
+  return typeof sub === "string" && sub.length > 0 ? sub : null;
 }

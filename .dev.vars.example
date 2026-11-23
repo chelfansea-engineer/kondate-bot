@@ -1,3 +1,5 @@
 # このファイルを .dev.vars にコピーして値を入れる（.dev.vars はコミットしない）
 LINE_CHANNEL_SECRET=
 LINE_CHANNEL_ACCESS_TOKEN=
+# LIFFアプリを作ったLINEログインチャネルのチャネルID
+LIFF_CHANNEL_ID=
