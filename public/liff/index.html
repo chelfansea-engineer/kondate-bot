@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <!-- LIFF ID は公開される値（LIFFのURLに含まれる）。認証情報ではない -->
+    <meta name="liff-id" content="2012765529-PkG4twAE" />
+    <title>在庫</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main>
+      <h1>家にある食材・調味料</h1>
+      <p id="status" role="status" aria-live="polite">読み込み中…</p>
+
+      <form id="add-form" hidden>
+        <label>
+          名前
+          <input name="name" required maxlength="50" autocomplete="off" />
+        </label>
+        <fieldset>
+          <legend>区分</legend>
+          <label class="choice">
+            <input type="radio" name="category" value="food" checked />
+            食材
+          </label>
+          <label class="choice">
+            <input type="radio" name="category" value="seasoning" />
+            調味料
+          </label>
+        </fieldset>
+        <label>
+          メモ（任意）
+          <input name="memo" maxlength="200" autocomplete="off" />
+        </label>
+        <button type="submit" class="primary">追加</button>
+      </form>
+
+      <section id="lists" hidden>
+        <h2>食材</h2>
+        <ul id="list-food"></ul>
+        <h2>調味料</h2>
+        <ul id="list-seasoning"></ul>
+      </section>
+    </main>
+    <noscript>JavaScript を有効にしてください。</noscript>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

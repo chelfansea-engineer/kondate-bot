@@ -24,7 +24,7 @@
 | 入口                                      | 役割                                |
 | ----------------------------------------- | ----------------------------------- |
 | POST /webhook                             | LINEからのメッセージ受信            |
-| GET /liff/*                               | 在庫編集画面の配信（素のHTML + JS） |
+| GET /liff/*                               | 在庫編集画面の配信（素のHTML + JS。静的アセットとして配信） |
 | GET/POST /api/pantry, DELETE /api/pantry/:id | 画面から呼ぶ在庫API（Authorization: Bearer <LIFFのIDトークン>） |
 | scheduled（cron: `0 0 * * *` = 9:00 JST） | 毎朝の献立Push                      |
 
@@ -36,15 +36,12 @@
 - src/core/ … 純粋な関数と型（いまは在庫の入力検証 pantry.ts。献立ロジックもここ。外部APIを呼ばない）
 - src/clients/ … LINE / Gemini / D1 の薄いラッパー（いまは line.ts / d1.ts）
 - migrations/ … D1のスキーマ（0001_create_pantry_items.sql）
+- public/liff/ … 在庫編集画面（素のHTML + JS。index.html / app.js / pantry-view.js / style.css）
 - scripts/ … 開発用スクリプト（simulate.ts / check-docs.ts）
 - test/ … テスト。helpers.ts に署名生成・DB初期化・外部通信ガード
 - docs/design.md … 設計書（構成図、モジュール依存図、ER図、API仕様、ファイル一覧）
 - docs/progress.md … 進み具合、決めたこと、ハマったこと
 - .dev.vars.example … 環境変数の見本（本物の .dev.vars は各自で作る）
-
-まだ無いもの（該当ステップで作る）:
-
-- public/liff/ … 在庫編集画面
 
 ## データ
 

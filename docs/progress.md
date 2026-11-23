@@ -1,18 +1,19 @@
 # 進み具合
 
-最終更新: 2026-11-23（設計書を追加）
+最終更新: 2026-11-23（ステップ3の実装）
 
 ## いまどこ
 
 - ステップ1（オウム返しボット）… 完了。実際のLINEで確認済み
 - ステップ2（在庫API + D1のテーブル + `pnpm run simulate`）… 完了。`main` にマージしてプッシュ済み。本番D1も作成・マイグレーション済み
-- 次はステップ3（LIFFの在庫編集画面 + リッチメニュー）。その前に、下の「人間がやること」を済ませる
+- ステップ3（LIFFの在庫編集画面 + リッチメニュー）… 完了。再デプロイ、リッチメニューの設定、LINE上とD1での動作確認まで済み（2026-11-23）。ブランチ `feature/step3-liff-pantry-ui` は未プッシュ・未マージ
+- 次はステップ4（チャットでの献立相談）
 
 | ステップ | 内容 | 状態 |
 | --- | --- | --- |
 | 1 | オウム返しボット（Webhook + 署名検証 + Reply） | 完了 |
 | 2 | 在庫API + D1のテーブル | 完了（`main` にマージ・プッシュ済み。本番D1の作成とマイグレーションも済） |
-| 3 | LIFFの在庫編集画面 + リッチメニュー | 未着手 |
+| 3 | LIFFの在庫編集画面 + リッチメニュー | 完了（LINE上とD1で、表示・追加・削除の動作確認済み。リッチメニュー設定済み）。`main` へのマージは未 |
 | 4 | チャットでの献立相談（Gemini接続） | 未着手 |
 | 5 | 毎朝9時のPush | 未着手 |
 
@@ -29,7 +30,23 @@
 - `docs/design.md`: 現状の設計書（構成図、モジュール依存図、シーケンス図、ER図、API仕様、ファイル一覧）
 - `scripts/check-docs.ts`（`pnpm run check:docs`）: 設計書のファイル一覧・依存図・ER図を実物と突き合わせる。ステップ完了時のルールは CLAUDE.md に書いた
 
+## ステップ3で作ったもの
+
+- `public/liff/`: 在庫編集画面（素のHTML + JS）。一覧（食材・調味料）、追加フォーム、削除（2回押し）
+- `wrangler.jsonc` の `assets`: `public/` をそのまま配信する（`/liff/*` はWorkerのコードを通らない）
+- 画面は `Authorization: Bearer <IDトークン>` だけを送る。IDトークンの期限が近いと、ログインし直す
+- `test/liff-view.test.ts` と `test/liff-screen.test.ts`: 表示ロジックと、画面ファイルの中身（XSS対策、ユーザーIDを送らない、LIFF IDの形式、入力上限）
+- `scripts/check-docs.ts` の対象に `public/` を追加
+
 ## 決めたこと
+
+- 画面は静的アセットで配信し、Honoの `/liff/*` ルートは作らない。コードを増やさず、Workerを通らないため
+- LIFF ID は `public/liff/index.html` の `<meta>` に置く。公開される値で、環境変数にする理由がない
+- 描画は `textContent` だけ。HTMLを文字列で差し込むAPIはテストで禁止
+- 削除は誤タップ防止のため2回押し（1回目で「本当に削除」、3秒以内にもう一度）
+- リッチメニューはコードにしない。画像が要り、作成にはアクセストークンを使うスクリプトが要るため。LINE Official Account Manager で設定する
+- `tsconfig.json` に `allowJs` を足した（テストから画面のJSを読み込むため）。画面のJS自体は型検査しない
+- 追加の依存はなし
 
 - トークンはIDトークン（`liff.getIDToken()`）を `Authorization: Bearer` で送る。アクセストークンだと検証とプロフィール取得で2回LINEを呼ぶため
 - 認証は `app.use("/api/*", ...)` で全体にかける。今後 `/api/*` にルートを足しても、検証を通らずには届かない
@@ -42,6 +59,10 @@
 - `@types/node` は入れず、`scripts/node-shims.d.ts` に使う分だけの型宣言を置いた。入れるなら依存追加なので相談してから
 
 ## ハマったこと
+
+- **テスト環境の `SELF` は静的アセットを返さない**: `assets` を設定しても404になる（Honoの404）。配信は `wrangler dev` で確かめ、テストは画面ファイルの中身の検査にした
+- **ヘッドレスChromeは幅が約500px未満にできない**: 390pxで撮ると右が切れて見える。500pxで撮り直した
+- **検査がコメントの文言を拾う**: 「HTML差し込みAPIを使わない」のテストが、コメント中の語に反応した。コメントの言い回しを変えた（検査はソース全体への単純な一致）
 
 - **setupFiles が vi.mock を無効にする**: セットアップで `cloudflare:test` を読み込むとWorker本体が本物のclientsごとキャッシュされ、テストのモックが効かず、本物のLINE APIを叩いた。`resetDb()` をテストから呼ぶ形にし、`blockNetwork()` で外部通信を失敗させるようにした
 - **GETにボディ**: テストで `Request` にGETのボディを付けると例外になる
@@ -58,5 +79,8 @@
 - 本番に秘密を登録する: `wrangler secret put LINE_CHANNEL_SECRET` と `wrangler secret put LINE_CHANNEL_ACCESS_TOKEN`（未了）
 - LINEの Webhook URL を `https://<ドメイン>/webhook` に付け替え、「検証」を通す（未了。トンネルは不要になる）
 - 設定を変えたら再デプロイが要る（`wrangler.jsonc` の `workers_dev` / `preview_urls` の明示は次回のデプロイで反映）
-- ステップ1とステップ2のブランチのプッシュ、PR作成、マージ
+- 再デプロイ: `pnpm exec wrangler deploy`（`assets` と、`workers_dev` / `preview_urls` の明示を反映する）
+- リッチメニューの設定: LINE Official Account Manager →「リッチメニュー」→ 作成。ボタンのリンク先は `https://liff.line.me/<LIFF ID>`
+- LINEの中で動作確認する（表示、追加、削除。外部ブラウザでは、ログイン画面に移動する）
+- ステップ3のブランチのプッシュ、`main` へのマージ
 - `pnpm install` 時のビルドスクリプト警告（esbuild / workerd）を消すなら `pnpm approve-builds`

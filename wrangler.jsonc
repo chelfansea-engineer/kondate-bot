@@ -6,6 +6,8 @@
   // 公開URLは workers.dev の1本だけにする。バージョンごとのプレビューURLは作らない
   "workers_dev": true,
   "preview_urls": false,
+  // /liff/* は public/ の中身をそのまま配信する（Workerのコードは通らない）
+  "assets": { "directory": "./public" },
   "vars": {
     // LIFFを載せたLINEログインチャネルのチャネルID。認証情報ではない（IDトークン検証の audience）
     "LIFF_CHANNEL_ID": "2012765529"
